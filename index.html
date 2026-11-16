@@ -481,15 +481,55 @@ function loadVoices(){
   });
   if(!S.cfg.voice) S.cfg.voice = sel.value;
 }
+/* 网络发音兜底：手机上很多浏览器（微信内置、部分国产浏览器）没有系统语音 */
+let netAudio = null;
+function playNet(text){
+  try{
+    if(netAudio){ netAudio.pause(); netAudio = null; }
+    netAudio = new Audio("https://dict.youdao.com/dictvoice?audio=" + encodeURIComponent(text) + "&type=2");
+    netAudio.play().catch(()=>{});
+    return true;
+  }catch(e){ return false; }
+}
+/* iOS/安卓需要一次用户手势解锁系统语音 */
+let unlocked = false;
+function unlockTTS(){
+  if(unlocked) return;
+  unlocked = true;
+  if(!synth || !window.SpeechSynthesisUtterance) return;
+  try{
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0; u.lang = "en-US";
+    synth.speak(u);
+  }catch(e){}
+}
 function speak(text, rate){
-  if(!synth) return;
-  synth.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
-  u.rate = rate || S.cfg.rate || 1;
-  const v = voices.find(x=>x.name === S.cfg.voice);
-  if(v) u.voice = v;
-  synth.speak(u);
+  if(!text) return;
+  unlockTTS();
+  const hasTTS = !!synth && !!window.SpeechSynthesisUtterance;
+  if(!hasTTS){ playNet(text); return; }
+  try{
+    if(synth.speaking || synth.pending) synth.cancel();
+  }catch(e){}
+  const go = ()=>{
+    try{
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      u.rate = rate || S.cfg.rate || 1;
+      const v = voices.find(x=>x.name === S.cfg.voice);
+      if(v) u.voice = v;
+      let started = false;
+      u.onstart = ()=>{ started = true; };
+      u.onerror = (e)=>{ const t=(e&&e.error)||""; if(!started && t!=="interrupted" && t!=="canceled") playNet(text); };
+      // 有的浏览器 cancel 之后立刻 speak 会被吞掉，留一帧
+      setTimeout(()=>{ try{ synth.speak(u); }catch(e){ playNet(text); } }, 40);
+      // 1 秒还没开口，说明系统语音不可用，走网络发音
+      setTimeout(()=>{
+        if(!started && !synth.speaking && !synth.pending) playNet(text);
+      }, 900);
+    }catch(e){ playNet(text); }
+  };
+  go();
 }
 /* 朗读按钮的「正在播放」提示 */
 function sayWith(btn, text){
@@ -500,6 +540,15 @@ function sayWith(btn, text){
   btn._t = setTimeout(()=>btn.classList.remove("spin"), 1000);
 }
 if(synth){ loadVoices(); if(speechSynthesis.onvoiceschanged!==undefined) speechSynthesis.onvoiceschanged = loadVoices; }
+/* 第一次触摸屏幕时解锁音频（手机浏览器要求） */
+document.addEventListener("touchstart", function once(){
+  unlockTTS();
+  document.removeEventListener("touchstart", once);
+}, {passive:true});
+document.addEventListener("click", function once2(){
+  unlockTTS();
+  document.removeEventListener("click", once2);
+});
 
 /* ============ 状态 ============ */
 const TOUCH = window.matchMedia("(hover:none)").matches;
