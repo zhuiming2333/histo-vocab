@@ -1,0 +1,863 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#14131a">
+<meta name="description" content="组织学中英词汇背诵 · 记忆 / 猜义 / 拼写 / 词表，带发音与进度记录">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
+<title>组织学词汇 · 背诵</title>
+<style>
+  :root{
+    --bg:#0e0d15; --panel:#1a1824; --panel2:#221f2e; --line:#332f42;
+    --ink:#eeeaf6; --dim:#928ba6; --dim2:#615b76;
+    --accent:#8b7cf6; --accent2:#c4b5fd;
+    --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    --shadow:0 34px 80px -38px #000;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;
+    min-height:100vh;position:relative;overflow-x:hidden;
+  }
+  /* ---- aurora / grain ---- */
+  .aurora{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .aurora i{position:absolute;border-radius:50%;filter:blur(72px);opacity:.45;
+    animation:drift 28s ease-in-out infinite alternate}
+  .aurora i:nth-child(1){width:540px;height:540px;background:#5b3fd6;top:-200px;left:-140px}
+  .aurora i:nth-child(2){width:480px;height:480px;background:#1c6b86;bottom:-220px;right:-140px;animation-delay:-9s}
+  .aurora i:nth-child(3){width:400px;height:400px;background:#8b3f6f;top:38%;left:58%;opacity:.26;animation-delay:-17s}
+  @keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(46px,-34px,0) scale(1.16)}}
+  body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{width:100%;max-width:760px;margin:0 auto;padding:18px 16px 44px;flex:1;
+    display:flex;flex-direction:column;position:relative;z-index:1}
+  /* ---- top bar ---- */
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .brand{font-size:15px;font-weight:700;letter-spacing:.4px;
+    background:linear-gradient(92deg,#fff,#cfc4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand span{color:var(--dim2);font-weight:500;font-size:11px;margin-left:7px;letter-spacing:2px;
+    -webkit-text-fill-color:var(--dim2)}
+  .spacer{flex:1}
+  .stat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .stat b{color:var(--ink);font-weight:700}
+  .ring{width:20px;height:20px;border-radius:50%;flex:none;position:relative;
+    background:conic-gradient(from -90deg,var(--accent) var(--p,0%),#2b2740 0);
+    transition:background .4s}
+  .ring::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--bg)}
+  .iconbtn{background:rgba(255,255,255,.035);border:1px solid var(--line);color:var(--dim);
+    width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:15px;line-height:1;
+    display:grid;place-items:center;transition:.18s}
+  .iconbtn:hover{color:var(--ink);border-color:#514873;background:rgba(255,255,255,.07)}
+  .iconbtn:active{transform:scale(.94)}
+  /* ---- tabs ---- */
+  .tabs{display:flex;gap:4px;background:rgba(255,255,255,.035);padding:4px;border-radius:13px;
+    border:1px solid var(--line);margin-bottom:16px;position:relative;
+    box-shadow:inset 0 1px 0 #ffffff08}
+  .tabind{position:absolute;top:4px;bottom:4px;left:4px;border-radius:10px;
+    background:linear-gradient(135deg,#8b7cf6,#6e5ce0);box-shadow:0 6px 18px -6px #8b7cf6cc,0 0 0 1px #ffffff1a inset;
+    transition:transform .32s cubic-bezier(.34,1.3,.5,1),width .32s cubic-bezier(.34,1.3,.5,1);pointer-events:none}
+  .tab{flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:13px;color:var(--dim);
+    cursor:pointer;transition:color .2s;user-select:none;position:relative;z-index:1;letter-spacing:.3px}
+  .tab:hover{color:#cfc6ea}
+  .tab.on{color:#fff;font-weight:600}
+  /* ---- progress ---- */
+  .bar{height:4px;background:rgba(255,255,255,.055);border-radius:99px;overflow:hidden;margin-bottom:18px}
+  .bar>i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,#6e5ce0,#a78bfa,#e0d4ff 92%);
+    box-shadow:0 0 14px #8b7cf6aa;transition:width .5s cubic-bezier(.3,1,.4,1)}
+  /* ---- card ---- */
+  .stage{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .card{
+    background:linear-gradient(158deg,rgba(46,41,64,.92),rgba(26,24,36,.96) 62%);
+    border:1px solid #3a3350;border-radius:22px;
+    padding:36px 26px 26px;text-align:center;position:relative;overflow:hidden;
+    min-height:290px;display:flex;flex-direction:column;justify-content:center;
+    box-shadow:var(--shadow),inset 0 1px 0 #ffffff0f;
+  }
+  .card::before{content:"";position:absolute;top:0;left:14%;right:14%;height:1px;
+    background:linear-gradient(90deg,transparent,#c4b5fd8c,transparent)}
+  .card::after{content:"";position:absolute;width:300px;height:300px;border-radius:50%;
+    background:radial-gradient(circle,#8b7cf626,transparent 68%);
+    top:-140px;right:-90px;pointer-events:none}
+  .cat{position:absolute;top:17px;left:0;right:0;font-size:10.5px;letter-spacing:3px;
+    color:var(--dim2);text-transform:uppercase}
+  .word{font-size:clamp(26px,6.4vw,42px);font-weight:700;letter-spacing:-.6px;line-height:1.24;
+    word-break:break-word;opacity:1;
+    background:linear-gradient(178deg,#fff 24%,#d6cdf2);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .word.anim{animation:rise .34s cubic-bezier(.2,.9,.3,1)}
+  .word.small{font-size:clamp(21px,4.6vw,30px)}
+  @keyframes rise{from{opacity:0;transform:translateY(7px) scale(.985)}to{opacity:1;transform:none}}
+  .say{margin-top:18px;display:inline-flex;align-items:center;gap:7px;
+    background:rgba(139,124,246,.13);border:1px solid rgba(139,124,246,.4);
+    color:#cfc4ff;padding:8px 18px;border-radius:99px;font-size:13px;cursor:pointer;
+    transition:.18s;user-select:none}
+  .say:hover{background:rgba(139,124,246,.24);color:#e9e1ff;box-shadow:0 0 22px -6px #8b7cf6aa}
+  .say:active{transform:scale(.96)}
+  .say.spin{opacity:.45}
+  .say.spin::after{content:"";width:10px;height:10px;border-radius:50%;
+    border:2px solid #cfc4ff55;border-top-color:#cfc4ff;animation:spin .7s linear infinite;margin-left:2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .reveal{margin-top:24px;padding-top:20px;border-top:1px dashed #3d3654;animation:fade .28s ease}
+  .zh{font-size:23px;font-weight:600;color:var(--ink);margin-bottom:10px;letter-spacing:.5px}
+  .def{font-size:13.5px;line-height:1.9;color:var(--dim);max-width:520px;margin:0 auto}
+  .hint{margin-top:auto;padding-top:20px;font-size:12px;color:var(--dim2)}
+  .hint kbd{background:rgba(255,255,255,.07);border:1px solid #403a58;border-bottom-width:2px;
+    border-radius:5px;padding:1px 6px;font-family:inherit;font-size:11px;color:#a9a1c4}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  /* ---- grade buttons ---- */
+  .grades{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+  .g{padding:15px 6px;border-radius:14px;border:1px solid var(--line);
+     background:rgba(255,255,255,.03);color:var(--dim);cursor:pointer;font-size:14px;font-weight:600;
+     transition:.18s;display:flex;flex-direction:column;gap:3px;align-items:center;
+     box-shadow:inset 0 1px 0 #ffffff08}
+  .g small{font-size:10.5px;font-weight:400;opacity:.55}
+  .g:hover{transform:translateY(-2px);background:rgba(255,255,255,.06)}
+  .g:active{transform:translateY(0) scale(.98)}
+  .g.bad:hover{border-color:var(--bad);color:var(--bad);box-shadow:0 8px 22px -14px var(--bad)}
+  .g.mid:hover{border-color:var(--warn);color:var(--warn);box-shadow:0 8px 22px -14px var(--warn)}
+  .g.ok:hover{border-color:var(--ok);color:var(--ok);box-shadow:0 8px 22px -14px var(--ok)}
+  .g.hidden{visibility:hidden}
+  /* ---- choose ---- */
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+  .opt{background:rgba(255,255,255,.032);border:1px solid var(--line);border-radius:14px;
+    padding:15px 16px;font-size:15px;color:var(--ink);cursor:pointer;transition:.16s;
+    text-align:left;font-family:inherit;box-shadow:inset 0 1px 0 #ffffff08;position:relative}
+  .opt:hover{border-color:#514873;background:rgba(255,255,255,.062);transform:translateX(2px)}
+  .opt:active{transform:scale(.99)}
+  .opt .key{display:inline-block;width:20px;color:var(--dim2);font-size:12px;margin-right:8px;font-variant-numeric:tabular-nums}
+  .opt.right{border-color:var(--ok);background:linear-gradient(90deg,#16241b,#1b2b21);color:#b7f5cd;
+    box-shadow:0 0 0 1px #4ade8055,0 10px 26px -16px #4ade80;animation:pop .3s}
+  .opt.wrong{border-color:var(--bad);background:linear-gradient(90deg,#26161a,#2b181d);color:#f5b7b7;animation:shake .32s}
+  .opt.dim{opacity:.4}
+  @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.025)}100%{transform:scale(1)}}
+  .optbar{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:12.5px;color:var(--dim2);gap:10px}
+  .optbar .btn{padding:9px 20px;font-size:13px}
+  /* ---- spelling ---- */
+  .spk{display:flex;flex-direction:column;align-items:center;gap:15px;padding:8px 0}
+  .bigsay{width:92px;height:92px;border-radius:50%;position:relative;
+    border:1px solid #554a7d;background:radial-gradient(circle at 32% 28%,#3d3560,#241f38);
+    color:var(--accent2);font-size:32px;cursor:pointer;display:grid;place-items:center;transition:.22s;
+    box-shadow:0 16px 34px -20px #000,inset 0 1px 0 #ffffff1a}
+  .bigsay::after{content:"";position:absolute;inset:-6px;border-radius:50%;
+    border:1px solid #8b7cf640;opacity:0;transition:.3s}
+  .bigsay:hover{background:radial-gradient(circle at 32% 28%,#4a4172,#2b2545);
+    box-shadow:0 0 0 9px #8b7cf61f,0 16px 34px -18px #000}
+  .bigsay:hover::after{opacity:1;inset:-10px}
+  .bigsay:active{transform:scale(.93)}
+  .answer{width:100%;max-width:420px;background:rgba(10,9,16,.72);border:1px solid #3a3450;border-radius:13px;
+    color:var(--ink);font-size:19px;text-align:center;padding:15px 16px;letter-spacing:1px;outline:none;
+    font-family:inherit;transition:.18s}
+  .answer::placeholder{color:var(--dim2);letter-spacing:0}
+  .answer:focus{border-color:var(--accent);box-shadow:0 0 0 3px #8b7cf61f,0 0 24px -10px #8b7cf6aa}
+  .answer.good{border-color:var(--ok);color:var(--ok);box-shadow:0 0 0 3px #4ade801f}
+  .answer.bad{border-color:var(--bad);animation:shake .32s}
+  @keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .feedback{font-size:14px;min-height:22px;color:var(--dim);line-height:1.57}
+  .feedback b{color:var(--ok)}
+  .feedback i{color:var(--bad);font-style:normal}
+  .feedback u{color:var(--warn);text-decoration:none;letter-spacing:1px}
+  .btnrow{display:flex;gap:10px;justify-content:center;flex-wrap:nowrap}
+  .btn{background:linear-gradient(135deg,#8b7cf6,#6e5ce0);color:#fff;border:none;border-radius:12px;
+    padding:12px 26px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s;
+    box-shadow:0 10px 26px -14px #8b7cf6cc,inset 0 1px 0 #ffffff2e}
+  .btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0) scale(.98)}
+  .btn.ghost{background:rgba(255,255,255,.045);color:var(--dim);border:1px solid var(--line);box-shadow:none}
+  .btn.ghost:hover{color:var(--ink);background:rgba(255,255,255,.08);filter:none}
+  /* ---- list ---- */
+  .filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{background:rgba(255,255,255,.032);border:1px solid var(--line);color:var(--dim);border-radius:99px;
+    padding:6px 13px;font-size:12.5px;cursor:pointer;transition:.16s}
+  .chip:hover{color:var(--ink);border-color:#4a4066}
+  .chip.on{background:linear-gradient(135deg,#8b7cf6,#6e5ce0);border-color:transparent;color:#fff;font-weight:600;
+    box-shadow:0 8px 20px -12px #8b7cf6}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{background:rgba(255,255,255,.032);border:1px solid var(--line);border-radius:13px;padding:13px 15px;
+    display:flex;align-items:center;gap:12px;cursor:pointer;transition:.16s;box-shadow:inset 0 1px 0 #ffffff08}
+  .item:hover{border-color:#4a4066;background:rgba(255,255,255,.062)}
+  .item .lw{font-size:15.5px;font-weight:600;flex:1;min-width:0;word-break:break-word}
+  .item .lz{font-size:13px;color:var(--dim);flex:none}
+  .item .dot{width:7px;height:7px;border-radius:50%;background:var(--dim2);flex:none;transition:.2s}
+  .item .dot.l1{background:var(--bad);box-shadow:0 0 8px #f8717188}
+  .item .dot.l2{background:var(--warn);box-shadow:0 0 8px #fbbf2488}
+  .item .dot.l3{background:var(--ok);box-shadow:0 0 8px #4ade8088}
+  .item .spk2{font-size:14px;color:var(--dim2);padding:4px 6px;border-radius:7px;transition:.16s;flex:none}
+  .item .spk2:hover{color:var(--accent2);background:#8b7cf61f}
+  .empty{text-align:center;color:var(--dim2);padding:50px 0;font-size:13px}
+  /* ---- settings sheet ---- */
+  .sheet{position:fixed;inset:0;background:#000000b8;display:none;align-items:flex-end;justify-content:center;z-index:50;
+    -webkit-backdrop-filter:blur(3px)}
+  .sheet.on{display:flex}
+  .sheet .inner{background:linear-gradient(180deg,#211e2e,#17151f);border:1px solid #3a3350;border-bottom:none;
+    border-radius:20px 20px 0 0;box-shadow:0 -24px 60px -30px #000;
+    width:100%;max-width:760px;padding:20px 20px 26px;animation:up .26s cubic-bezier(.3,1,.4,1)}
+  @keyframes up{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
+  .sheet h3{font-size:14px;margin-bottom:16px;color:var(--ink);letter-spacing:.4px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid #2a2539}
+  .row:last-of-type{border-bottom:none}
+  .row label{font-size:13.5px;color:var(--dim)}
+  .row select{background:#100e18;color:var(--ink);border:1px solid #3a3450;border-radius:9px;
+    padding:9px 10px;font-size:13px;max-width:200px;font-family:inherit;outline:none;transition:.16s}
+  .row select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #8b7cf61f}
+  .switch{position:relative;width:44px;height:25px;background:#3a3450;border-radius:99px;cursor:pointer;transition:.24s;flex:none}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;background:#fff;border-radius:50%;
+    transition:left .24s cubic-bezier(.34,1.3,.5,1);box-shadow:0 2px 6px #0006}
+  .switch.on{background:linear-gradient(135deg,#8b7cf6,#6e5ce0);box-shadow:0 0 16px -4px #8b7cf6aa}
+  .switch.on::after{left:22px}
+  .danger{width:100%;margin-top:18px;background:rgba(248,113,113,.09);border:1px solid #4a2530;color:#f08f8f;
+    border-radius:12px;padding:13px;font-size:13px;cursor:pointer;font-family:inherit;transition:.16s}
+  .danger:hover{background:rgba(248,113,113,.16);border-color:#6b3341}
+  /* ---- done screen ---- */
+  .done{text-align:center;padding:34px 10px}
+  .done .big{font-size:44px;margin-bottom:14px;animation:rise .4s}
+  .done h2{font-size:20px;margin-bottom:8px}
+  .done p{color:var(--dim);font-size:13.5px;line-height:1.9;margin-bottom:20px}
+  @media(hover:none){.g:hover,.opt:hover,.item:hover,.btn:hover{transform:none}}
+  @media(max-width:520px){
+    .wrap{padding:10px 12px 34px}
+    .top{margin-bottom:12px;gap:9px}
+    .brand{font-size:14px}
+    .brand span{display:none}
+    .tabs{gap:3px;padding:3px;border-radius:12px;margin-bottom:13px}
+    .tab{font-size:12.5px;padding:10px 2px;letter-spacing:0}
+    .tabind{top:3px;bottom:3px;left:3px}
+    .bar{margin-bottom:14px}
+    .card{padding:34px 16px 24px;min-height:230px;border-radius:20px}
+    .cat{top:14px;font-size:10px;letter-spacing:2.5px}
+    .word{font-size:27px}
+    .word.small{font-size:20px}
+    .say{margin-top:16px;padding:9px 20px;font-size:13.5px}
+    .reveal{margin-top:18px;padding-top:16px}
+    .zh{font-size:20px}
+    .def{font-size:13px;line-height:1.85}
+    .hint{padding-top:16px;font-size:11.5px}
+    .grades{gap:8px;margin-top:11px}
+    .g{padding:16px 4px;font-size:13.5px;border-radius:13px}
+    .g small{font-size:10px}
+    .opts{gap:9px;margin-top:16px}
+    .opt{padding:16px 15px;font-size:15px;border-radius:13px}
+    .optbar{margin-top:13px;font-size:12px}
+    .optbar .btn{padding:10px 18px}
+    .spk{gap:14px;padding:4px 0}
+    .bigsay{width:86px;height:86px;font-size:30px}
+    .answer{font-size:17px;padding:15px 12px;border-radius:12px}
+    .feedback{font-size:13px}
+    .btn{padding:13px 22px;font-size:14px;border-radius:12px}
+    .item{padding:14px 13px;border-radius:12px}
+    .item .lw{font-size:14.5px}
+    .item .lz{font-size:12px}
+    .chip{padding:7px 12px;font-size:12px}
+    .sheet .inner{border-radius:20px 20px 0 0;padding:20px 16px calc(26px + env(safe-area-inset-bottom))}
+    .row{padding:13px 0}
+    .row select{max-width:150px;font-size:13px}
+    .stat{font-size:11.5px;gap:6px}
+  }
+  @media(max-width:360px){
+    .word{font-size:23px}
+    .opt{font-size:14px;padding:14px 12px}
+    .g{font-size:12.5px;padding:14px 3px}
+    .tab{font-size:11.5px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="aurora"><i></i><i></i><i></i></div>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">组织学词汇<span>HISTOLOGY</span></div>
+    <div class="spacer"></div>
+    <div class="stat"><span class="ring" id="ring"></span><span id="stat">0 / 0</span></div>
+    <button class="iconbtn" id="btnSet" title="设置">⚙</button>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tabind" id="tabind"></div>
+    <div class="tab on" data-tab="learn">记忆</div>
+    <div class="tab" data-tab="choose">猜义</div>
+    <div class="tab" data-tab="spell">拼写</div>
+    <div class="tab" data-tab="list">词表</div>
+  </div>
+
+  <div class="bar"><i id="pbar"></i></div>
+
+  <!-- LEARN -->
+  <div class="stage" id="view-learn">
+    <div class="card" id="card">
+      <div class="cat" id="cat"></div>
+      <div class="word" id="word">—</div>
+      <div><button class="say" id="say">🔊 <span>朗读</span></button></div>
+      <div id="rev" style="display:none"></div>
+      <div class="hint" id="hint">按 <kbd>空格</kbd> 显示释义 · 按 <kbd>S</kbd> 朗读</div>
+    </div>
+    <div class="grades">
+      <div class="g bad hidden" data-g="1">不认识<small>1</small></div>
+      <div class="g mid hidden" data-g="2">模糊<small>2</small></div>
+      <div class="g ok hidden" data-g="3">认识<small>3</small></div>
+    </div>
+  </div>
+
+  <!-- CHOOSE -->
+  <div class="stage" id="view-choose" style="display:none">
+    <div class="card">
+      <div class="cat" id="cat3"></div>
+      <div class="word" id="word3">—</div>
+      <div><button class="say" id="say3">🔊 <span>朗读</span></button></div>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div class="optbar">
+      <span id="cprog">—</span>
+      <button class="btn ghost" id="skip3">跳过 →</button>
+    </div>
+  </div>
+
+  <!-- SPELL -->
+  <div class="stage" id="view-spell" style="display:none">
+    <div class="card">
+      <div class="cat" id="cat2"></div>
+      <div class="spk">
+        <button class="bigsay" id="bigsay">🔊</button>
+        <input class="answer" id="ans" placeholder="听到什么就拼什么…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <div class="feedback" id="fb">听音拼写 · 回车提交</div>
+        <div class="btnrow">
+          <button class="btn ghost" id="again">再听一次</button>
+          <button class="btn" id="submit">提交</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="stage" id="view-list" style="display:none">
+    <div class="filters" id="filters"></div>
+    <div class="list" id="list"></div>
+  </div>
+</div>
+
+<!-- settings -->
+<div class="sheet" id="sheet">
+  <div class="inner">
+    <h3>设置</h3>
+    <div class="row">
+      <label>发音人</label>
+      <select id="selVoice"></select>
+    </div>
+    <div class="row">
+      <label>语速</label>
+      <select id="selRate">
+        <option value="0.7">0.7× 慢</option>
+        <option value="0.85">0.85× 稍慢</option>
+        <option value="1" selected>1.0× 正常</option>
+        <option value="1.15">1.15× 稍快</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>显示单词时自动朗读</label>
+      <div class="switch on" id="swAuto"></div>
+    </div>
+    <div class="row">
+      <label>只刷「未掌握」的词</label>
+      <div class="switch" id="swWeak"></div>
+    </div>
+    <button class="danger" id="btnReset">清空全部学习进度</button>
+    <div style="text-align:center;margin-top:14px"><button class="btn ghost" id="btnClose">关闭</button></div>
+  </div>
+</div>
+
+<script>
+/* ============ 词库 ============ */
+const CATS = {
+  epi:"上皮组织", cnn:"结缔组织", bld:"血液", mus:"肌组织", nrv:"神经组织", org:"器官与屏障"
+};
+const WORDS = [
+  // 上皮
+  {w:"endothelium", z:"内皮", c:"epi", d:"衬于心血管和淋巴管内表面的单层扁平上皮。"},
+  {w:"mesothelium", z:"间皮", c:"epi", d:"衬于胸膜、腹膜、心包膜表面的单层扁平上皮。"},
+  {w:"basement membrane", z:"基膜", c:"epi", d:"上皮基底面与结缔组织之间的薄膜，起支持、连接和滤过作用。"},
+  {w:"microvilli", z:"微绒毛", c:"epi", d:"上皮细胞游离面的细小指状突起，扩大细胞表面积。"},
+  {w:"cilium", z:"纤毛", c:"epi", d:"上皮细胞游离面较长的能动突起，可定向摆动推送物质。"},
+  {w:"junctional complex", z:"连接复合体", c:"epi", d:"紧密连接、中间连接、桥粒和缝隙连接中两个以上相邻并存的结构。"},
+  {w:"stratified squamous epithelium", z:"复层扁平上皮", c:"epi", d:"由多层细胞组成、表层细胞扁平的 epithelium，耐摩擦、起保护作用。"},
+  // 结缔
+  {w:"connective tissue", z:"结缔组织", c:"cnn", d:"由细胞和大量细胞外基质构成，具支持、连接、营养和防御功能。"},
+  {w:"fibroblast", z:"成纤维细胞", c:"cnn", d:"合成胶原纤维和基质，是创伤修复的主要细胞。"},
+  {w:"macrophage", z:"巨噬细胞", c:"cnn", d:"由单核细胞分化而来，具吞噬和抗原提呈功能。"},
+  {w:"mast cell", z:"肥大细胞", c:"cnn", d:"胞质颗粒含组胺、肝素等，参与过敏反应。"},
+  {w:"fat cell", z:"脂肪细胞", c:"cnn", d:"贮存脂肪的细胞，胞质内充满脂滴。"},
+  {w:"plasma cell", z:"浆细胞", c:"cnn", d:"由 B 淋巴细胞分化，合成和分泌抗体。"},
+  {w:"isogenous group", z:"同源细胞群", c:"cnn", d:"软骨内一个软骨细胞分裂形成的细胞群，同处一个软骨陷窝。"},
+  {w:"lymphoid tissue", z:"淋巴组织", c:"cnn", d:"以网状组织为支架、含大量淋巴细胞的组织。"},
+  {w:"lymphoid nodule", z:"淋巴小结", c:"cnn", d:"圆形或卵圆形的密集淋巴组织，可见生发中心。"},
+  // 血液
+  {w:"erythrocyte", z:"红细胞", c:"bld", d:"成熟者无核，含血红蛋白，运输 O₂ 和 CO₂。"},
+  {w:"leukocyte", z:"白细胞", c:"bld", d:"有核的血细胞，参与防御和免疫。"},
+  {w:"neutrophil", z:"中性粒细胞", c:"bld", d:"数量最多的白细胞，强吞噬能力，脓细胞的主要来源。"},
+  {w:"eosinophil", z:"嗜酸性粒细胞", c:"bld", d:"颗粒嗜酸性，参与抗过敏和抗寄生虫免疫。"},
+  {w:"basophil", z:"嗜碱性粒细胞", c:"bld", d:"颗粒含肝素和组胺，与过敏反应有关。"},
+  {w:"lymphocyte", z:"淋巴细胞", c:"bld", d:"执行免疫应答，分 T 细胞、B 细胞和 NK 细胞。"},
+  {w:"monocyte", z:"单核细胞", c:"bld", d:"体积最大的白细胞，穿出血管后分化为巨噬细胞。"},
+  // 肌
+  {w:"muscular tissue", z:"肌组织", c:"mus", d:"由肌细胞构成，具有收缩功能。"},
+  {w:"skeletal muscle", z:"骨骼肌", c:"mus", d:"有横纹、多核、受躯体神经支配的随意肌。"},
+  {w:"smooth muscle", z:"平滑肌", c:"mus", d:"无横纹、单核、不受意志支配的肌组织。"},
+  {w:"cardiac muscle", z:"心肌", c:"mus", d:"有横纹、有闰盘、不随意的肌组织。"},
+  {w:"sarcomere", z:"肌节", c:"mus", d:"相邻两条 Z 线之间的一段肌原纤维，是收缩的基本单位。"},
+  {w:"myofibril", z:"肌原纤维", c:"mus", d:"肌浆内细长的纤维束，由粗肌丝和细肌丝规律排列构成。"},
+  {w:"intercalated disk", z:"闰盘", c:"mus", d:"心肌细胞间的连接结构，含桥粒和缝隙连接。"},
+  // 神经
+  {w:"nervous tissue", z:"神经组织", c:"nrv", d:"由神经元和神经胶质细胞构成。"},
+  {w:"neuron", z:"神经元", c:"nrv", d:"神经系统的结构和功能单位，能接受刺激、传导冲动。"},
+  {w:"nerve fiber", z:"神经纤维", c:"nrv", d:"神经元的长轴突（或长树突）及其外包的神经胶质细胞。"},
+  {w:"neurofibril", z:"神经原纤维", c:"nrv", d:"神经元胞质内的细丝，构成细胞骨架并参与物质运输。"},
+  {w:"Nissl body", z:"尼氏体", c:"nrv", d:"胞质内的粗面内质网和游离核糖体，合成蛋白质。"},
+  {w:"dendrite", z:"树突", c:"nrv", d:"自胞体发出的分支突起，接受刺激并将冲动传向胞体。"},
+  {w:"axon", z:"轴突", c:"nrv", d:"自胞体轴丘发出，将神经冲动由胞体传出。"},
+  {w:"synapse", z:"突触", c:"nrv", d:"神经元之间或神经元与效应细胞之间的特化连接。"},
+  // 器官与屏障
+  {w:"podocyte", z:"足细胞", c:"org", d:"肾小囊脏层细胞，其足突参与构成肾滤过屏障。"},
+  {w:"chief cell", z:"主细胞", c:"org", d:"甲状旁腺主细胞（分泌甲状旁腺激素）；胃腺主细胞则分泌胃蛋白酶原。"},
+  {w:"parietal cell", z:"壁细胞", c:"org", d:"胃腺细胞，分泌盐酸和内因子。"},
+  {w:"pancreatic islet", z:"胰岛", c:"org", d:"胰腺的内分泌部，分泌胰岛素、胰高血糖素等。"},
+  {w:"hepatic plate", z:"肝板", c:"org", d:"肝细胞呈板状排列的结构，是肝小叶的主体。"},
+  {w:"hepatic lobule", z:"肝小叶", c:"org", d:"肝脏结构和功能的基本单位。"},
+  {w:"hepatocyte", z:"肝细胞", c:"org", d:"肝的实质细胞，具合成、解毒、贮存等多种功能。"},
+  {w:"portal area", z:"门管区", c:"org", d:"肝小叶之间，小叶间动脉、小叶间静脉和胆管伴行的区域。"},
+  {w:"perisinusoidal space", z:"窦周隙", c:"org", d:"肝血窦内皮与肝细胞之间的狭窄间隙，含贮脂细胞和网状纤维。"},
+  {w:"pulmonary alveolus", z:"肺泡", c:"org", d:"肺内进行气体交换的囊状结构。"},
+  {w:"alveolar duct", z:"肺泡管", c:"org", d:"呼吸性细支气管的分支，管壁布满肺泡开口。"},
+  {w:"blood-air barrier", z:"气血屏障", c:"org", d:"肺泡与血液之间进行气体交换所经过的结构。"},
+  {w:"nephron", z:"肾单位", c:"org", d:"肾的结构和功能单位，由肾小体和肾小管组成。"},
+  {w:"renal corpuscle", z:"肾小体", c:"org", d:"由血管球和肾小囊构成，滤过形成原尿。"},
+  {w:"renal tubule", z:"肾小管", c:"org", d:"肾单位中完成重吸收和分泌的管道部分。"},
+  {w:"renal capsule", z:"肾小囊", c:"org", d:"包绕血管球的双层囊，脏层为足细胞。"},
+  {w:"macula densa", z:"致密斑", c:"org", d:"远端小管靠近血管极处的高柱状上皮细胞，感受钠离子浓度。"},
+  {w:"filtration membrane", z:"滤过膜", c:"org", d:"由毛细血管内皮、基膜和足细胞裂隙膜三层构成。"},
+  {w:"filtration barrier", z:"滤过屏障", c:"org", d:"即滤过膜，限制大分子通过，形成原尿。"},
+  {w:"intestinal villi", z:"小肠绒毛", c:"org", d:"上皮和固有层向肠腔伸出的指状突起，扩大吸收面积。"},
+  {w:"mucosa", z:"黏膜", c:"org", d:"消化管壁最内层，由上皮、固有层和黏膜肌层组成。"},
+  {w:"splenic sinusoid", z:"脾血窦", c:"org", d:"脾内特殊的毛细血管，内皮细胞呈杆状，间隙大。"},
+  {w:"spleen", z:"脾", c:"org", d:"人体最大的淋巴器官，具滤血和免疫功能。"},
+  {w:"epidermis", z:"表皮", c:"org", d:"皮肤浅层，为角化的复层扁平上皮。"},
+  {w:"dermis", z:"真皮", c:"org", d:"皮肤深层，由致密结缔组织构成。"},
+  {w:"cornea", z:"角膜", c:"org", d:"眼球前部的透明层，由外向内有五层结构。"},
+  {w:"endocardium", z:"心内膜", c:"org", d:"心壁内层，由内皮、内皮下层和心内膜下层构成。"},
+  {w:"subendothelial layer", z:"内皮下层", c:"org", d:"内皮外方的薄层疏松结缔组织，含少量平滑肌。"},
+  {w:"blood-testis barrier", z:"血睾屏障", c:"org", d:"由支持细胞间紧密连接等构成，隔离生精细胞与血液。"}
+];
+
+/* ============ 存储 ============ */
+const KEY = "histo-vocab-v1";
+let S = {prog:{}, cfg:{auto:true, weak:false, rate:1, voice:""}};
+try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(S, JSON.parse(raw)); }catch(e){}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function box(w){ const p = S.prog[w]; return p ? (p.box||0) : 0; }
+
+/* ============ 语音 ============ */
+const synth = window.speechSynthesis;
+let voices = [];
+function loadVoices(){
+  if(!synth) return;
+  voices = synth.getVoices().filter(v=>/^en/i.test(v.lang));
+  const sel = document.getElementById("selVoice");
+  const cur = S.cfg.voice;
+  sel.innerHTML = "";
+  if(!voices.length){ sel.innerHTML = '<option value="">无可用英文语音</option>'; return; }
+  voices.forEach((v,i)=>{
+    const o = document.createElement("option");
+    o.value = v.name; o.textContent = v.name + " · " + v.lang;
+    if((cur && v.name===cur) || (!cur && /en-US/i.test(v.lang) && i===0)) o.selected = true;
+    sel.appendChild(o);
+  });
+  if(!S.cfg.voice) S.cfg.voice = sel.value;
+}
+function speak(text, rate){
+  if(!synth) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.rate = rate || S.cfg.rate || 1;
+  const v = voices.find(x=>x.name === S.cfg.voice);
+  if(v) u.voice = v;
+  synth.speak(u);
+}
+/* 朗读按钮的「正在播放」提示 */
+function sayWith(btn, text){
+  speak(text);
+  if(!btn) return;
+  btn.classList.add("spin");
+  clearTimeout(btn._t);
+  btn._t = setTimeout(()=>btn.classList.remove("spin"), 1000);
+}
+if(synth){ loadVoices(); if(speechSynthesis.onvoiceschanged!==undefined) speechSynthesis.onvoiceschanged = loadVoices; }
+
+/* ============ 状态 ============ */
+const TOUCH = window.matchMedia("(hover:none)").matches;
+let mode = "learn";
+let pool = [];        // 本轮卡片
+let idx = 0;
+let revealed = false;
+let curSpell = null;
+
+function buildPool(){
+  let arr = WORDS.slice();
+  if(S.cfg.weak) arr = arr.filter(o => box(o.w) < 3);
+  if(!arr.length) arr = WORDS.slice();
+  // 未掌握优先，同级内随机
+  arr.sort((a,b)=> (box(a.w)-box(b.w)) || (Math.random()-0.5));
+  pool = arr;
+}
+function card(){
+  const o = pool[idx];
+  if(!o){ finish(); return; }
+  revealed = false;
+  document.getElementById("cat").textContent = CATS[o.c];
+  const w = document.getElementById("word");
+  w.textContent = o.w;
+  w.className = "word" + (o.w.length > 16 ? " small" : "");
+  void w.offsetWidth; w.classList.add("anim");
+  document.getElementById("rev").style.display = "none";
+  document.querySelectorAll(".g").forEach(g=>g.classList.add("hidden"));
+  document.getElementById("hint").innerHTML = TOUCH
+    ? '点一下看释义 · 左右滑动评价'
+    : '按 <kbd>空格</kbd> 显示释义 · 按 <kbd>S</kbd> 朗读';
+  if(S.cfg.auto) speak(o.w);
+  paintStat();
+}
+function reveal(){
+  const o = pool[idx];
+  if(!o || revealed) return;
+  revealed = true;
+  const rev = document.getElementById("rev");
+  rev.innerHTML = '<div class="zh">'+esc(o.z)+'</div><div class="def">'+esc(o.d)+'</div>';
+  rev.style.display = "block";
+  document.querySelectorAll(".g").forEach(g=>g.classList.remove("hidden"));
+  document.getElementById("hint").innerHTML = TOUCH
+    ? '左滑＝认识 · 右滑＝不认识'
+    : '按 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 评价并继续';
+}
+function grade(level){
+  const o = pool[idx]; if(!o) return;
+  const p = S.prog[o.w] || {box:0, right:0, wrong:0};
+  if(level === 3) p.box = Math.min(3, (p.box||0)+1);
+  if(level === 2) p.box = Math.max(1, p.box||1);
+  if(level === 1) p.box = 0;
+  p.right = (p.right||0) + (level===3?1:0);
+  p.wrong = (p.wrong||0) + (level===1?1:0);
+  p.t = Date.now();
+  S.prog[o.w] = p;
+  save();
+  next();
+}
+function next(){
+  idx++;
+  if(idx >= pool.length){ finish(); return; }
+  card();
+}
+function finish(){
+  const st = document.getElementById("view-learn");
+  const known = WORDS.filter(o=>box(o.w)>=3).length;
+  st.innerHTML = '<div class="card"><div class="done"><div class="big">🌿</div>'+
+    '<h2>这一轮走完了</h2><p>本轮 '+pool.length+' 个词 · 累计掌握 <b style="color:var(--ok)">'+known+'</b> / '+WORDS.length+'</p>'+
+    '<div class="btnrow"><button class="btn" onclick="restart()">再来一轮</button></div></div></div>';
+  paintStat();
+}
+window.restart = function(){
+  document.getElementById("view-learn").innerHTML =
+    '<div class="card" id="card"><div class="cat" id="cat"></div><div class="word" id="word">—</div>'+
+    '<div><button class="say" id="say">🔊 <span>朗读</span></button></div><div id="rev" style="display:none"></div>'+
+    '<div class="hint" id="hint"></div></div>'+
+    '<div class="grades"><div class="g bad hidden" data-g="1">不认识<small>1</small></div>'+
+    '<div class="g mid hidden" data-g="2">模糊<small>2</small></div>'+
+    '<div class="g ok hidden" data-g="3">认识<small>3</small></div></div>';
+  bindCard();
+  idx = 0; buildPool(); card();
+};
+
+/* ============ 猜义 ============ */
+let qPool = [];
+let qIdx = 0;
+let qLock = false;
+let qCur = null;
+
+function buildQ(){
+  qPool = WORDS.slice();
+  if(S.cfg.weak) qPool = qPool.filter(o=>box(o.w) < 3);
+  if(!qPool.length) qPool = WORDS.slice();
+  qPool.sort((a,b)=> (box(a.w)-box(b.w)) || (Math.random()-0.5));
+  qIdx = 0;
+}
+function qNext(){
+  qLock = false;
+  if(qIdx >= qPool.length){
+    document.getElementById("opts").innerHTML = "";
+    document.getElementById("word3").textContent = "✓";
+    document.getElementById("say3").style.display = "none";
+    document.getElementById("cprog").textContent = "这一轮结束了";
+    document.getElementById("skip3").textContent = "再来一轮";
+    document.getElementById("skip3").onclick = ()=>{ buildQ(); document.getElementById("say3").style.display=""; qNext(); };
+    return;
+  }
+  qCur = qPool[qIdx];
+  document.getElementById("skip3").textContent = "跳过 →";
+  document.getElementById("skip3").onclick = ()=>{ qIdx++; qNext(); };
+  document.getElementById("cat3").textContent = CATS[qCur.c];
+  const w = document.getElementById("word3");
+  w.textContent = qCur.w;
+  w.className = "word" + (qCur.w.length > 16 ? " small" : "");
+  void w.offsetWidth; w.classList.add("anim");
+  document.getElementById("cprog").textContent = (qIdx+1) + " / " + qPool.length;
+  document.getElementById("say3").style.display = "";
+  if(S.cfg.auto) speak(qCur.w);
+
+  // 干扰项：优先同类别，不够再全库补
+  const same = WORDS.filter(o => o.w !== qCur.w && o.c === qCur.c);
+  const other = WORDS.filter(o => o.w !== qCur.w && o.c !== qCur.c);
+  shuffle(same); shuffle(other);
+  const picks = same.slice(0,3);
+  while(picks.length < 3 && other.length) picks.push(other.shift());
+  const opts = shuffle([qCur].concat(picks));
+  document.getElementById("opts").innerHTML = opts.map((o,i)=>
+    '<button class="opt" data-w="'+esc(o.w)+'"><span class="key">'+(i+1)+'</span>'+esc(o.z)+'</button>'
+  ).join("");
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    b.onclick = ()=>pickOpt(b);
+  });
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pickOpt(btn){
+  if(qLock || !qCur) return;
+  qLock = true;
+  const right = btn.dataset.w === qCur.w;
+  const p = S.prog[qCur.w] || {box:0,right:0,wrong:0};
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    if(b.dataset.w === qCur.w) b.classList.add("right");
+    else if(b === btn) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if(right){
+    p.box = Math.min(3, (p.box||0)+1); p.right = (p.right||0)+1;
+    document.getElementById("cprog").textContent = "✓ 正确";
+  }else{
+    p.box = 0; p.wrong = (p.wrong||0)+1;
+    document.getElementById("cprog").innerHTML = '✗ 正确答案：<b style="color:var(--ok)">'+esc(qCur.z)+'</b>';
+  }
+  p.t = Date.now(); S.prog[qCur.w] = p; save(); paintStat();
+  speak(qCur.w);
+  setTimeout(()=>{ qIdx++; qNext(); }, right ? 750 : 1500);
+}
+
+/* ============ 拼写 ============ */
+function spellNext(){
+  const cand = pool.length ? pool : WORDS;
+  curSpell = cand[Math.floor(Math.random()*cand.length)];
+  const ans = document.getElementById("ans");
+  ans.value = ""; ans.className = "answer"; ans.disabled = false;
+  document.getElementById("cat2").textContent = CATS[curSpell.c];
+  document.getElementById("fb").innerHTML = "听音拼写 · 回车提交";
+  speak(curSpell.w);
+  ans.focus();
+}
+function checkSpell(){
+  if(!curSpell) return;
+  const ans = document.getElementById("ans");
+  const val = ans.value.trim().toLowerCase().replace(/\s+/g," ");
+  if(!val) return;
+  const target = curSpell.w.toLowerCase();
+  const fb = document.getElementById("fb");
+  if(val === target){
+    ans.className = "answer good";
+    fb.innerHTML = '<b>✓ 正确</b> · ' + esc(curSpell.z);
+    const p = S.prog[curSpell.w] || {box:0,right:0,wrong:0};
+    p.right = (p.right||0)+1; p.t = Date.now(); S.prog[curSpell.w] = p; save();
+    setTimeout(spellNext, 1100);
+  }else{
+    ans.className = "answer bad";
+    // 逐字差异提示
+    let mark = "";
+    for(let i=0;i<target.length;i++){
+      if(i < val.length && val[i] === target[i]) mark += target[i];
+      else mark += "·";
+    }
+    fb.innerHTML = '<i>✗ 再想想</i> · 对应位置：<u>'+esc(mark)+'</u> &nbsp;（'+target.length+' 字符）';
+    const p = S.prog[curSpell.w] || {box:0,right:0,wrong:0};
+    p.wrong = (p.wrong||0)+1; p.box = 0; p.t = Date.now(); S.prog[curSpell.w] = p; save();
+  }
+}
+
+/* ============ 列表 ============ */
+let listCat = "all";
+function paintList(){
+  const box = document.getElementById("list");
+  const f = document.getElementById("filters");
+  const cats = [["all","全部"]].concat(Object.keys(CATS).map(k=>[k,CATS[k]]));
+  f.innerHTML = cats.map(([k,v])=>{
+    const n = k==="all" ? WORDS.length : WORDS.filter(o=>o.c===k).length;
+    return '<div class="chip'+(listCat===k?" on":"")+'" data-cat="'+k+'">'+v+' <span style="opacity:.5">'+n+'</span></div>';
+  }).join("");
+  f.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listCat = c.dataset.cat; paintList(); });
+  const arr = listCat==="all" ? WORDS : WORDS.filter(o=>o.c===listCat);
+  if(!arr.length){ box.innerHTML = '<div class="empty">没有词</div>'; return; }
+  box.innerHTML = arr.map((o,i)=>{
+    const b = box_(o.w);
+    return '<div class="item" data-w="'+esc(o.w)+'">'+
+      '<span class="dot l'+b+'"></span>'+
+      '<span class="lw">'+esc(o.w)+'</span>'+
+      '<span class="lz">'+esc(o.z)+'</span>'+
+      '<span class="spk2" data-say="'+esc(o.w)+'">🔊</span></div>';
+  }).join("");
+  box.querySelectorAll(".item").forEach(el=>{
+    el.onclick = (e)=>{
+      if(e.target.dataset.say){ speak(e.target.dataset.say); return; }
+      el.dataset.open = el.dataset.open ? "" : "1";
+      const w = el.dataset.w;
+      const o = WORDS.find(x=>x.w===w);
+      let d = el.querySelector(".ldef");
+      if(!d){
+        d = document.createElement("div");
+        d.className = "ldef";
+        d.style.cssText = "font-size:12.5px;color:#8d879e;line-height:1.8;margin-top:8px;padding-top:8px;border-top:1px dashed #332f42;flex-basis:100%";
+        d.textContent = o.d;
+        el.appendChild(d);
+        el.style.flexWrap = "wrap";
+      }else d.remove();
+    };
+  });
+}
+function box_(w){ const p = S.prog[w]; return p ? Math.min(3,(p.box||0)+1) : 1; }
+
+/* ============ 统计 ============ */
+function paintStat(){
+  const known = WORDS.filter(o=>box(o.w)>=3).length;
+  const pct = known / WORDS.length * 100;
+  document.getElementById("stat").innerHTML = '<b>'+known+'</b> / '+WORDS.length;
+  document.getElementById("pbar").style.width = pct.toFixed(1) + "%";
+  const ring = document.getElementById("ring");
+  if(ring) ring.style.setProperty("--p", pct.toFixed(1) + "%");
+}
+
+/* ============ 绑定 ============ */
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+function bindCard(){
+  const sayBtn = document.getElementById("say");
+  if(sayBtn) sayBtn.onclick = ()=>{ if(pool[idx]) sayWith(sayBtn, pool[idx].w); };
+  document.querySelectorAll(".g").forEach(g=>g.onclick=()=>grade(+g.dataset.g));
+}
+/* 标签滑块 */
+function moveInd(tab){
+  const ind = document.getElementById("tabind");
+  if(!ind || !tab) return;
+  ind.style.width = tab.offsetWidth + "px";
+  ind.style.transform = "translateX(" + (tab.offsetLeft - 4) + "px)";
+}
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick = ()=>{
+    mode = t.dataset.tab;
+    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x===t));
+    moveInd(t);
+    document.getElementById("view-learn").style.display = mode==="learn"?"flex":"none";
+    document.getElementById("view-choose").style.display = mode==="choose"?"flex":"none";
+    document.getElementById("view-spell").style.display = mode==="spell"?"flex":"none";
+    document.getElementById("view-list").style.display = mode==="list"?"flex":"none";
+    if(mode==="choose"){ buildQ(); qNext(); }
+    if(mode==="spell"){ buildPool(); spellNext(); }
+    if(mode==="list") paintList();
+    if(mode==="learn" && !pool.length){ buildPool(); idx=0; card(); }
+  };
+});
+document.getElementById("submit").onclick = checkSpell;
+document.getElementById("again").onclick = ()=>{ if(curSpell) speak(curSpell.w); };
+document.getElementById("bigsay").onclick = ()=>{ if(curSpell) sayWith(document.getElementById("bigsay"), curSpell.w); };
+document.getElementById("ans").addEventListener("keydown", e=>{
+  if(e.key === "Enter"){ e.preventDefault();
+    if(document.getElementById("ans").className.includes("good")) return;
+    checkSpell();
+  }
+});
+document.addEventListener("keydown", e=>{
+  if(/input|textarea|select/i.test(document.activeElement.tagName)) return;
+  if(mode === "choose"){
+    if(["1","2","3","4"].includes(e.key)){
+      const b = document.querySelectorAll("#opts .opt")[+e.key-1];
+      if(b) pickOpt(b);
+    }
+    return;
+  }
+  if(mode !== "learn") return;
+  if(e.code === "Space"){ e.preventDefault(); reveal(); }
+  else if(e.key === "s" || e.key === "S"){ if(pool[idx]) speak(pool[idx].w); }
+  else if(e.key === "1") grade(1);
+  else if(e.key === "2") grade(2);
+  else if(e.key === "3") grade(3);
+  else if(e.key === "ArrowRight") next();
+});
+document.getElementById("say3").onclick = ()=>{
+  if(qCur) sayWith(document.getElementById("say3"), qCur.w);
+};
+document.getElementById("view-learn").addEventListener("click", e=>{
+  if(e.target.closest(".say") || e.target.closest(".btn")) return;
+  if(!revealed) reveal();
+});
+
+/* settings */
+const sheet = document.getElementById("sheet");
+document.getElementById("btnSet").onclick = ()=>sheet.classList.add("on");
+document.getElementById("btnClose").onclick = ()=>sheet.classList.remove("on");
+sheet.onclick = e=>{ if(e.target===sheet) sheet.classList.remove("on"); };
+document.getElementById("selVoice").onchange = e=>{ S.cfg.voice = e.target.value; save(); };
+document.getElementById("selRate").onchange = e=>{ S.cfg.rate = +e.target.value; save(); };
+document.getElementById("selRate").value = String(S.cfg.rate||1);
+const swAuto = document.getElementById("swAuto"), swWeak = document.getElementById("swWeak");
+swAuto.classList.toggle("on", !!S.cfg.auto);
+swWeak.classList.toggle("on", !!S.cfg.weak);
+swAuto.onclick = ()=>{ S.cfg.auto = !S.cfg.auto; swAuto.classList.toggle("on", S.cfg.auto); save(); };
+swWeak.onclick = ()=>{ S.cfg.weak = !S.cfg.weak; swWeak.classList.toggle("on", S.cfg.weak); save();
+  buildPool(); idx = 0; if(mode==="learn") card(); };
+document.getElementById("btnReset").onclick = ()=>{
+  if(confirm("确定清空所有学习进度？此操作不可恢复。")){
+    S.prog = {}; save(); paintStat();
+    buildPool(); idx = 0;
+    if(mode==="learn") restart();
+    if(mode==="list") paintList();
+  }
+};
+
+/* boot */
+bindCard();
+buildPool();
+idx = 0;
+card();
+paintStat();
+moveInd(document.querySelector(".tab.on"));
+window.addEventListener("resize", ()=>moveInd(document.querySelector(".tab.on")));
+
+/* 手机：左右滑动卡片评价 */
+(function(){
+  const el = document.getElementById("view-learn");
+  let x0 = 0, y0 = 0, t0 = 0;
+  el.addEventListener("touchstart", e=>{
+    if(e.touches.length !== 1) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+  }, {passive:true});
+  el.addEventListener("touchend", e=>{
+    if(!revealed || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    if(Date.now() - t0 > 700) return;
+    if(Math.abs(dx) < 62 || Math.abs(dx) < Math.abs(dy)) return;
+    grade(dx < 0 ? 3 : 1);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>
